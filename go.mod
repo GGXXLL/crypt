@@ -1,6 +1,6 @@
-module github.com/bketelsen/crypt
+module github.com/DoNewsCode/crypt
 
-go 1.12
+go 1.16
 
 require (
 	cloud.google.com/go v0.92.3 // indirect
@@ -25,5 +25,4 @@ require (
 	google.golang.org/genproto v0.0.0-20210816143620-e15ff196659d // indirect
 	google.golang.org/grpc v1.40.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-
 )
