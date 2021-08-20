@@ -1,13 +1,12 @@
 package mock
 
 import (
+	"context"
 	"errors"
-	"path"
-	"strings"
+	"github.com/DoNewsCode/crypt/backend"
+	"github.com/DoNewsCode/crypt/internal"
 	"sync"
 	"time"
-
-	"github.com/DoNewsCode/crypt/backend"
 )
 
 var (
@@ -17,16 +16,18 @@ var (
 	lock = sync.RWMutex{}
 )
 
-type Client struct{}
+type Client struct {
+	cache *sync.Map
+}
 
 func New(_ []string) (*Client, error) {
 	once.Do(func() {
 		mockedStore = make(map[string][]byte, 2)
 	})
-	return &Client{}, nil
+	return &Client{cache: &sync.Map{}}, nil
 }
 
-func (c *Client) Get(key string) ([]byte, error) {
+func (c *Client) Get(_ context.Context, key string) ([]byte, error) {
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -37,21 +38,7 @@ func (c *Client) Get(key string) ([]byte, error) {
 	return nil, err
 }
 
-func (c *Client) List(key string) (backend.KVPairs, error) {
-	lock.RLock()
-	defer lock.RUnlock()
-
-	var list backend.KVPairs
-	dir := path.Clean(key) + "/"
-	for k, v := range mockedStore {
-		if strings.HasPrefix(k, dir) {
-			list = append(list, &backend.KVPair{Key: k, Value: v})
-		}
-	}
-	return list, nil
-}
-
-func (c *Client) Set(key string, value []byte) error {
+func (c *Client) Set(_ context.Context, key string, value []byte) error {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -59,20 +46,27 @@ func (c *Client) Set(key string, value []byte) error {
 	return nil
 }
 
-func (c *Client) Watch(key string, _ chan bool) <-chan *backend.Response {
+func (c *Client) Watch(ctx context.Context, key string) <-chan *backend.Response {
 	lock.RLock()
 	defer lock.RUnlock()
 
 	respChan := make(chan *backend.Response, 0)
 	go func() {
 		for {
-			b, err := c.Get(key)
-			if err != nil {
-				respChan <- &backend.Response{Error: err}
-				time.Sleep(time.Second * 5)
-				continue
+			select {
+			case <-time.After(1 * time.Second):
+				b, err := c.Get(ctx, key)
+				if err != nil {
+					respChan <- &backend.Response{Error: err}
+					continue
+				}
+				internal.WatchCache(c.cache, key, b, respChan)
+
+			case <-ctx.Done():
+				respChan <- &backend.Response{Error: ctx.Err()}
+				return
+
 			}
-			respChan <- &backend.Response{Value: b}
 		}
 	}()
 	return respChan

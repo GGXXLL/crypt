@@ -2,13 +2,13 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 
 	"github.com/DoNewsCode/crypt/backend"
 	"github.com/DoNewsCode/crypt/backend/consul"
 	"github.com/DoNewsCode/crypt/backend/etcd"
-	"github.com/DoNewsCode/crypt/backend/firestore"
 	"github.com/DoNewsCode/crypt/encoding/secconf"
 )
 
@@ -25,10 +25,9 @@ type configManager struct {
 
 // A ConfigManager retrieves and decrypts configuration from a key/value store.
 type ConfigManager interface {
-	Get(key string) ([]byte, error)
-	List(key string) (KVPairs, error)
-	Set(key string, value []byte) error
-	Watch(key string, stop chan bool) <-chan *Response
+	Get(ctx context.Context, key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte) error
+	Watch(ctx context.Context, key string) <-chan *Response
 }
 
 type standardConfigManager struct {
@@ -45,15 +44,6 @@ func NewConfigManager(client backend.Store, keystore io.Reader) (ConfigManager, 
 		return nil, err
 	}
 	return configManager{byts, client}, nil
-}
-
-// NewStandardFirestoreConfigManager returns a new ConfigManager backed by Firestore.
-func NewStandardFirestoreConfigManager(machines []string) (ConfigManager, error) {
-	store, err := firestore.New(machines)
-	if err != nil {
-		return nil, err
-	}
-	return NewStandardConfigManager(store)
 }
 
 // NewStandardEtcdConfigManager returns a new ConfigManager backed by etcd.
@@ -73,16 +63,6 @@ func NewStandardConsulConfigManager(machines []string) (ConfigManager, error) {
 		return nil, err
 	}
 	return NewStandardConfigManager(store)
-}
-
-// NewFirestoreConfigManager returns a new ConfigManager backed by Firestore.
-// Data will be encrypted.
-func NewFirestoreConfigManager(machines []string, keystore io.Reader) (ConfigManager, error) {
-	store, err := firestore.New(machines)
-	if err != nil {
-		return nil, err
-	}
-	return NewConfigManager(store, keystore)
 }
 
 // NewEtcdConfigManager returns a new ConfigManager backed by etcd.
@@ -106,8 +86,8 @@ func NewConsulConfigManager(machines []string, keystore io.Reader) (ConfigManage
 }
 
 // Get retrieves and decodes a secconf value stored at key.
-func (c configManager) Get(key string) ([]byte, error) {
-	value, err := c.store.Get(key)
+func (c configManager) Get(ctx context.Context, key string) ([]byte, error) {
+	value, err := c.store.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -117,60 +97,27 @@ func (c configManager) Get(key string) ([]byte, error) {
 // Get retrieves a value stored at key.
 // convenience function, no additional value provided over
 // `etcdctl`
-func (c standardConfigManager) Get(key string) ([]byte, error) {
-	value, err := c.store.Get(key)
+func (c standardConfigManager) Get(ctx context.Context, key string) ([]byte, error) {
+	value, err := c.store.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
 	return value, err
 }
 
-// List retrieves and decodes all secconf value stored under key.
-func (c configManager) List(key string) (KVPairs, error) {
-	list, err := c.store.List(key)
-	retList := make(KVPairs, len(list))
-	if err != nil {
-		return nil, err
-	}
-	for i, kv := range list {
-		retList[i] = &KVPair{}
-		retList[i].Key = kv.Key
-		retList[i].Value, err = secconf.Decode(kv.Value, bytes.NewBuffer(c.keystore))
-		if err != nil {
-			return nil, err
-		}
-	}
-	return retList, nil
-}
-
-// List retrieves all values under key.
-// convenience function, no additional value provided over
-// `etcdctl`
-func (c standardConfigManager) List(key string) (KVPairs, error) {
-	list, err := c.store.List(key)
-	retList := make(KVPairs, len(list))
-	if err != nil {
-		return nil, err
-	}
-	for i, kv := range list {
-		retList[i] = &KVPair{*kv}
-	}
-	return retList, err
-}
-
 // Set will put a key/value into the data store
 // and encode it with secconf
-func (c configManager) Set(key string, value []byte) error {
+func (c configManager) Set(ctx context.Context, key string, value []byte) error {
 	encodedValue, err := secconf.Encode(value, bytes.NewBuffer(c.keystore))
 	if err == nil {
-		err = c.store.Set(key, encodedValue)
+		err = c.store.Set(ctx, key, encodedValue)
 	}
 	return err
 }
 
 // Set will put a key/value into the data store
-func (c standardConfigManager) Set(key string, value []byte) error {
-	err := c.store.Set(key, value)
+func (c standardConfigManager) Set(ctx context.Context, key string, value []byte) error {
+	err := c.store.Set(ctx, key, value)
 	return err
 }
 
@@ -179,14 +126,12 @@ type Response struct {
 	Error error
 }
 
-func (c configManager) Watch(key string, stop chan bool) <-chan *Response {
+func (c configManager) Watch(ctx context.Context, key string) <-chan *Response {
 	resp := make(chan *Response, 0)
-	backendResp := c.store.Watch(key, stop)
+	backendResp := c.store.Watch(ctx, key)
 	go func() {
 		for {
 			select {
-			case <-stop:
-				return
 			case r := <-backendResp:
 				if r.Error != nil {
 					resp <- &Response{nil, r.Error}
@@ -194,26 +139,31 @@ func (c configManager) Watch(key string, stop chan bool) <-chan *Response {
 				}
 				value, err := secconf.Decode(r.Value, bytes.NewBuffer(c.keystore))
 				resp <- &Response{value, err}
+			case <-ctx.Done():
+				resp <- &Response{Error: ctx.Err()}
+				return
+
 			}
 		}
 	}()
 	return resp
 }
 
-func (c standardConfigManager) Watch(key string, stop chan bool) <-chan *Response {
+func (c standardConfigManager) Watch(ctx context.Context, key string) <-chan *Response {
 	resp := make(chan *Response, 0)
-	backendResp := c.store.Watch(key, stop)
+	backendResp := c.store.Watch(ctx, key)
 	go func() {
 		for {
 			select {
-			case <-stop:
-				return
 			case r := <-backendResp:
 				if r.Error != nil {
 					resp <- &Response{nil, r.Error}
 					continue
 				}
 				resp <- &Response{r.Value, nil}
+			case <-ctx.Done():
+				resp <- &Response{Error: ctx.Err()}
+				return
 			}
 		}
 	}()

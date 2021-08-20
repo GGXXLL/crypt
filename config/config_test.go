@@ -2,7 +2,8 @@ package config
 
 import (
 	"bytes"
-	"reflect"
+	"context"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/DoNewsCode/crypt/backend/mock"
@@ -102,220 +103,66 @@ Rw==
 -----END PGP PRIVATE KEY BLOCK-----
 `
 
-func Test_StandardSet_BasePath(t *testing.T) {
-	key := "foo"
-	value := []byte("bar")
-
+func TestClient(t *testing.T) {
 	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewStandardConfigManager(store)
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	err = cm.Set(key, value)
-	if err != nil {
-		t.Errorf("Error adding key: %s\n", err.Error())
-	}
-}
+	assert.NoError(t, err)
 
-func Test_StandardGet_BasePath(t *testing.T) {
-	key := "foo"
-	value := []byte("bar")
-
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewStandardConfigManager(store)
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	storedValue, err := cm.Get(key)
-	if err != nil {
-		t.Errorf("Error getting key: %s\n", err.Error())
-	}
-	if !reflect.DeepEqual(storedValue, value) {
-		t.Errorf("Two values did not match: %s\n", err.Error())
-	}
-}
-
-func Test_StandardGet_AlternatePath_NoKey(t *testing.T) {
-	key := "doesnotexist"
-
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewStandardConfigManager(store)
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	_, err = cm.Get(key)
-	if err == nil {
-		t.Errorf("Did not get expected error\n")
-	}
-}
-
-func Test_StandardList_BasePath(t *testing.T) {
-	dir := "dir"
-	key := "dir/foo"
-	value := []byte("bar")
-
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewStandardConfigManager(store)
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	err = cm.Set(key, value)
-	if err != nil {
-		t.Errorf("Error adding key: %s\n", err.Error())
-	}
-	storedValue, err := cm.List(dir)
-	if err != nil {
-		t.Errorf("Error list dir: %s\n", err.Error())
-	}
-	if len(storedValue) == 0 {
-		t.Error("Empty list got on list directory")
-	}
-	if storedValue[0].Key != key {
-		t.Errorf("Keys did not match: %s vs %s", storedValue[0].Key, key)
-	}
-	if !reflect.DeepEqual(storedValue[0].Value, value) {
-		t.Errorf("Two values did not match: %+v vs %+v", storedValue[0].Value, value)
-	}
-}
-
-func Test_StandardWatch_BasePath(t *testing.T) {
-	key := "foo"
-
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewStandardConfigManager(store)
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	timeout := make(chan bool, 0)
-	resp := cm.Watch(key, timeout)
-	select {
-	case r := <-resp:
-		if r.Error != nil {
-			t.Errorf("Error watching value: %s\n", r.Error.Error())
-		}
-	}
-}
-
-func Test_Set_BasePath(t *testing.T) {
-	key := "foo_enc"
-	value := []byte("bar_enc")
-
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
 	cm, err := NewConfigManager(store, bytes.NewBufferString(pubring))
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	err = cm.Set(key, value)
-	if err != nil {
-		t.Errorf("Error adding key: %s\n", err.Error())
-	}
+	assert.NoError(t, err)
+
+	cmForGet, err := NewConfigManager(store, bytes.NewBufferString(secring))
+
+	err = cm.Set(context.TODO(), "crypt_test", []byte("test"))
+	assert.NoError(t, err)
+
+	val, err := cmForGet.Get(context.TODO(), "crypt_test")
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("test"), val)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	resp := cmForGet.Watch(ctx, "crypt_test")
+
+	err = cm.Set(context.TODO(), "crypt_test", []byte("update"))
+	assert.NoError(t, err)
+
+	var r *Response
+	r = <-resp
+	assert.NoError(t, r.Error)
+	assert.Equal(t, []byte("update"), r.Value)
+
+	cancel()
+	r = <-resp
+	assert.Error(t, r.Error)
 }
 
-func Test_Get_BasePath(t *testing.T) {
-	key := "foo_enc"
-	value := []byte("bar_enc")
-
+func TestStandardClient(t *testing.T) {
 	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewConfigManager(store, bytes.NewBufferString(secring))
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	storedValue, err := cm.Get(key)
-	if err != nil {
-		t.Errorf("Error getting key: %s\n", err.Error())
-	}
-	if !reflect.DeepEqual(storedValue, value) {
-		t.Errorf("Two values did not match: %s\n", err.Error())
-	}
-}
+	assert.NoError(t, err)
 
-func Test_Get_AlternatePath_NoKey(t *testing.T) {
-	key := "doesnotexist_enc"
+	cm, err := NewStandardConfigManager(store)
+	assert.NoError(t, err)
 
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewConfigManager(store, bytes.NewBufferString(secring))
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	_, err = cm.Get(key)
-	if err == nil {
-		t.Errorf("Did not get expected error\n")
-	}
-}
+	err = cm.Set(context.TODO(), "crypt_test", []byte("test"))
+	assert.NoError(t, err)
 
-func Test_List_BasePath(t *testing.T) {
-	dir := "dir_enc"
-	key := "dir_enc/foo_enc"
-	value := []byte("bar_enc")
+	val, err := cm.Get(context.TODO(), "crypt_test")
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("test"), val)
 
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewConfigManager(store, bytes.NewBufferString(secring))
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	err = cm.Set(key, value)
-	if err != nil {
-		t.Errorf("Error adding key: %s\n", err.Error())
-	}
-	storedValue, err := cm.List(dir)
-	if err != nil {
-		t.Errorf("Error list dir: %s\n", err.Error())
-	}
-	if len(storedValue) == 0 {
-		t.Error("Empty list got on list directory")
-	}
-	if storedValue[0].Key != key {
-		t.Errorf("Keys did not match: %s vs %s", storedValue[0].Key, key)
-	}
-	if !reflect.DeepEqual(storedValue[0].Value, value) {
-		t.Errorf("Two values did not match: %+v vs %+v", storedValue[0].Value, value)
-	}
-}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	resp := cm.Watch(ctx, "crypt_test")
 
-func Test_Watch_BasePath(t *testing.T) {
-	key := "foo_enc"
+	err = cm.Set(context.TODO(), "crypt_test", []byte("update"))
+	assert.NoError(t, err)
 
-	store, err := mock.New([]string{})
-	if err != nil {
-		t.Errorf("Error creating backend: %s\n", err.Error())
-	}
-	cm, err := NewConfigManager(store, bytes.NewBufferString(secring))
-	if err != nil {
-		t.Errorf("Error creating config manager: %s\n", err.Error())
-	}
-	timeout := make(chan bool, 0)
-	resp := cm.Watch(key, timeout)
-	select {
-	case r := <-resp:
-		if r.Error != nil {
-			t.Errorf("Error watching value: %s\n", r.Error.Error())
-		}
-	}
+	var r *Response
+	r = <-resp
+	assert.NoError(t, r.Error)
+	assert.Equal(t, []byte("update"), r.Value)
+
+	cancel()
+	r = <-resp
+	assert.Error(t, r.Error)
 }

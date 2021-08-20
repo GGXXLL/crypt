@@ -1,18 +1,17 @@
-package consul
+package redis
 
 import (
 	"context"
 	"fmt"
 	"github.com/DoNewsCode/crypt/backend"
 	"github.com/DoNewsCode/crypt/internal"
-	"github.com/hashicorp/consul/api"
-	"strings"
+	"github.com/go-redis/redis/v8"
 	"sync"
 	"time"
 )
 
 type Client struct {
-	client        *api.KV
+	client        redis.UniversalClient
 	cache         *sync.Map
 	watchInterval time.Duration
 }
@@ -26,16 +25,13 @@ func WithWatchInterval(duration time.Duration) OptionFunc {
 }
 
 func New(machines []string, opts ...OptionFunc) (*Client, error) {
-	conf := api.DefaultConfig()
-	if len(machines) > 0 {
-		conf.Address = machines[0]
+	newClient := redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs: machines,
+	})
+	if err := newClient.Ping(context.TODO()).Err(); err != nil {
+		return nil, fmt.Errorf("creating new redis client for crypt.backend.Client: %v", err)
 	}
-	client, err := api.NewClient(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	cli := &Client{client: client.KV(), cache: &sync.Map{}, watchInterval: 10 * time.Second}
+	cli := &Client{client: newClient, cache: &sync.Map{}, watchInterval: 10 * time.Second}
 	for _, opt := range opts {
 		opt(cli)
 	}
@@ -43,25 +39,16 @@ func New(machines []string, opts ...OptionFunc) (*Client, error) {
 	return cli, nil
 }
 
-func (c *Client) Get(_ context.Context, key string) ([]byte, error) {
-	kv, _, err := c.client.Get(key, nil)
+func (c *Client) Get(ctx context.Context, key string) ([]byte, error) {
+	resp, err := c.client.Get(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}
-	if kv == nil {
-		return nil, fmt.Errorf("key ( %s ) was not found", key)
-	}
-	return kv.Value, nil
+	return []byte(resp), nil
 }
 
-func (c *Client) Set(_ context.Context, key string, value []byte) error {
-	key = strings.TrimPrefix(key, "/")
-	kv := &api.KVPair{
-		Key:   key,
-		Value: value,
-	}
-	_, err := c.client.Put(kv, nil)
-	return err
+func (c *Client) Set(ctx context.Context, key string, value []byte) error {
+	return c.client.Set(ctx, key, string(value), 0).Err()
 }
 
 func (c *Client) Watch(ctx context.Context, key string) <-chan *backend.Response {
@@ -69,16 +56,18 @@ func (c *Client) Watch(ctx context.Context, key string) <-chan *backend.Response
 	go func() {
 		defer func() {
 			close(respChan)
+			c.client.Close()
 		}()
+
 		for {
 			select {
 			case <-time.After(c.watchInterval):
-				val, err := c.Get(ctx, key)
+				res, err := c.Get(ctx, key)
 				if err != nil {
 					respChan <- &backend.Response{Error: err}
 					continue
 				}
-				internal.WatchCache(c.cache, key, val, respChan)
+				internal.WatchCache(c.cache, key, res, respChan)
 			case <-ctx.Done():
 				respChan <- &backend.Response{Error: ctx.Err()}
 				return

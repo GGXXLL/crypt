@@ -1,0 +1,66 @@
+name: Go
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    strategy:
+      matrix:
+        go-version: [ 1.15.x,1.16.x ]
+    runs-on: ubuntu-latest
+    services:
+      etcd:
+        image: bitnami/etcd
+        env:
+          ALLOW_NONE_AUTHENTICATION: yes
+          ETCD_ADVERTISE_CLIENT_URLS: http://localhost:2379
+        ports:
+          - 2379:2379
+      consul:
+        image: hashicorp/consul:1.10.0
+        ports:
+          - 8500:8500
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - uses: actions/cache@v2
+        id: cache-go-mod
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('go.mod') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}
+
+      - name: Environment Variables from Dotenv
+        uses: c-py/action-dotenv-to-setenv@v3
+
+      - name: Build
+        if: steps.cache-go-mod.outputs.cache-hit != 'true'
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: coverage.txt

@@ -1,6 +1,8 @@
 // Package backend provides the K/V store interface for crypt backends.
 package backend
 
+import "context"
+
 // Response represents a response from a backend store.
 type Response struct {
 	Value []byte
@@ -19,14 +21,16 @@ type KVPairs []*KVPair
 // data in a K/V store.
 type Store interface {
 	// Get retrieves a value from a K/V store for the provided key.
-	Get(key string) ([]byte, error)
-
-	// List retrieves all keys and values under a provided key.
-	List(key string) (KVPairs, error)
+	Get(ctx context.Context, key string) ([]byte, error)
 
 	// Set sets the provided key to value.
-	Set(key string, value []byte) error
+	Set(ctx context.Context, key string, value []byte) error
 
 	// Watch monitors a K/V store for changes to key.
-	Watch(key string, stop chan bool) <-chan *Response
+	Watch(ctx context.Context, key string) <-chan *Response
+}
+
+
+type Watcher interface {
+
 }
