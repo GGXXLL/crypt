@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
         log.Fatal(err)
     }
-	value, err := cm.Get(key)
+	value, err := cm.Get(context.TODO(), key)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -68,8 +68,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	stop := make(chan bool, 0)
-	resp := cm.Watch(key, stop)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	resp := cm.Watch(ctx, key)
 	if err != nil {
 		log.Fatal(err)
 	}

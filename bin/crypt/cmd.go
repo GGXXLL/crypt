@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/DoNewsCode/crypt/backend"
 	"github.com/DoNewsCode/crypt/backend/consul"
 	"github.com/DoNewsCode/crypt/backend/etcd"
+	"github.com/DoNewsCode/crypt/backend/redis"
 	"github.com/DoNewsCode/crypt/encoding/secconf"
 )
 
@@ -53,7 +55,7 @@ func getEncrypted(key, keyring string, store backend.Store) ([]byte, error) {
 		return value, err
 	}
 	defer kr.Close()
-	data, err := store.Get(key)
+	data, err := store.Get(context.TODO(), key)
 	if err != nil {
 		return value, err
 	}
@@ -67,74 +69,9 @@ func getEncrypted(key, keyring string, store backend.Store) ([]byte, error) {
 
 func getPlain(key string, store backend.Store) ([]byte, error) {
 	var value []byte
-	data, err := store.Get(key)
+	data, err := store.Get(context.TODO(), key)
 	if err != nil {
 		return value, err
-	}
-	return data, err
-}
-
-func listCmd(flagset *flag.FlagSet) {
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s list [args...] key\n", os.Args[0])
-		flagset.PrintDefaults()
-	}
-	flagset.StringVar(&secretKeyring, "secret-keyring", ".secring.gpg", "path to armored secret keyring")
-	flagset.Parse(os.Args[2:])
-	key := flagset.Arg(0)
-	if key == "" {
-		flagset.Usage()
-		os.Exit(1)
-	}
-	backendStore, err := getBackendStore(backendName, endpoint)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if plaintext {
-		list, err := listPlain(key, backendStore)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for _, kv := range list {
-			fmt.Printf("%s: %s", kv.Key, kv.Value)
-		}
-		return
-	}
-	list, err := listEncrypted(key, secretKeyring, backendStore)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, kv := range list {
-		fmt.Printf("%s: %s", kv.Key, kv.Value)
-	}
-}
-
-func listEncrypted(key, keyring string, store backend.Store) (backend.KVPairs, error) {
-	kr, err := os.Open(secretKeyring)
-	if err != nil {
-		return nil, err
-	}
-	defer kr.Close()
-
-	data, err := store.List(key)
-	if err != nil {
-		return nil, err
-	}
-	for i, kv := range data {
-		data[i].Value, err = secconf.Decode(kv.Value, kr)
-		kr.Seek(0, 0)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return data, err
-}
-
-func listPlain(key string, store backend.Store) (backend.KVPairs, error) {
-	data, err := store.List(key)
-	if err != nil {
-		return nil, err
 	}
 	return data, err
 }
@@ -181,7 +118,7 @@ func setCmd(flagset *flag.FlagSet) {
 
 }
 func setPlain(key string, store backend.Store, d []byte) error {
-	err := store.Set(key, d)
+	err := store.Set(context.TODO(), key, d)
 	return err
 
 }
@@ -196,7 +133,7 @@ func setEncrypted(key, keyring string, d []byte, store backend.Store) error {
 	if err != nil {
 		return err
 	}
-	err = store.Set(key, secureValue)
+	err = store.Set(context.TODO(), key, secureValue)
 	return err
 }
 
@@ -207,6 +144,8 @@ func getBackendStore(provider string, endpoint string) (backend.Store, error) {
 			endpoint = "127.0.0.1:8500"
 		case "etcd":
 			endpoint = "http://127.0.0.1:4001"
+		case "redis":
+			endpoint = "http://127.0.0.1:6379"
 		}
 	}
 	machines := []string{endpoint}
@@ -215,6 +154,8 @@ func getBackendStore(provider string, endpoint string) (backend.Store, error) {
 		return etcd.New(machines)
 	case "consul":
 		return consul.New(machines)
+	case "redis":
+		return redis.New(machines)
 	default:
 		return nil, errors.New("invalid backend " + provider)
 	}
