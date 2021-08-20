@@ -26,8 +26,8 @@ func main() {
 		log.Fatal(err)
 	}
 	defer kr.Close()
-	machines := []string{"http://127.0.0.1:4001"}
-	cm, err := config.NewEtcdConfigManager(machines, kr)
+	machines := []string{"http://127.0.0.1:2379"}
+	cm, err := config.NewConfigManager("etcd", machines, kr)
 	if err != nil {
         log.Fatal(err)
     }
@@ -45,9 +45,12 @@ func main() {
 package main
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"time"
 
 	"github.com/DoNewsCode/crypt/config"
 )
@@ -63,11 +66,27 @@ func main() {
 		log.Fatal(err)
 	}
 	defer kr.Close()
-	machines := []string{"http://127.0.0.1:4001"}
-	cm, err := config.NewEtcdConfigManager(machines, kr)
+	secret, err := ioutil.ReadAll(kr)
 	if err != nil {
 		log.Fatal(err)
 	}
+	cfg := config.Config{
+		Name:          "etcd",
+		Machines:      []string{"http://127.0.0.1:2379"},
+		Secret:        secret,
+		WatchInterval: 5 * time.Second,
+	}
+	cm, err := config.NewConfigManager(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	value, err := cm.Get(context.TODO(), key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s\n", value)
+	
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resp := cm.Watch(ctx, key)

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"context"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -103,14 +102,14 @@ Rw==
 -----END PGP PRIVATE KEY BLOCK-----
 `
 
-func TestClient(t *testing.T) {
+func TestClientWithSecret(t *testing.T) {
 	store, err := mock.New([]string{})
 	assert.NoError(t, err)
 
-	cm, err := NewConfigManager(store, bytes.NewBufferString(pubring))
+	cm, err := NewConfigManagerWithStore(store, WithSecretKey([]byte(pubring)))
 	assert.NoError(t, err)
 
-	cmForGet, err := NewConfigManager(store, bytes.NewBufferString(secring))
+	cmForGet, err := NewConfigManagerWithStore(store, WithSecretKey([]byte(secring)))
 
 	err = cm.Set(context.TODO(), "crypt_test", []byte("test"))
 	assert.NoError(t, err)
@@ -136,11 +135,11 @@ func TestClient(t *testing.T) {
 	assert.Error(t, r.Error)
 }
 
-func TestStandardClient(t *testing.T) {
+func TestClient(t *testing.T) {
 	store, err := mock.New([]string{})
 	assert.NoError(t, err)
 
-	cm, err := NewStandardConfigManager(store)
+	cm, err := NewConfigManagerWithStore(store)
 	assert.NoError(t, err)
 
 	err = cm.Set(context.TODO(), "crypt_test", []byte("test"))
