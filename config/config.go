@@ -89,7 +89,7 @@ func NewConfigManagerWithStore(store backend.Store, opts ...OptionFunc) (Manager
 }
 
 // Get retrieves and decodes a secconf value stored at key.
-func (c configManager) Get(ctx context.Context, key string) ([]byte, error) {
+func (c *configManager) Get(ctx context.Context, key string) ([]byte, error) {
 	value, err := c.store.Get(ctx, key)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (c configManager) Get(ctx context.Context, key string) ([]byte, error) {
 
 // Set will put a key/value into the data store
 // and encode it with secconf
-func (c configManager) Set(ctx context.Context, key string, value []byte) error {
+func (c *configManager) Set(ctx context.Context, key string, value []byte) error {
 	if c.withSecret {
 		encodedValue, err := secconf.Encode(value, bytes.NewBuffer(c.secret))
 		if err != nil {
@@ -119,7 +119,7 @@ type Response struct {
 	Error error
 }
 
-func (c configManager) Watch(ctx context.Context, key string) <-chan *Response {
+func (c *configManager) Watch(ctx context.Context, key string) <-chan *Response {
 	resp := make(chan *Response, 0)
 	backendResp := c.store.Watch(ctx, key)
 	go func() {
