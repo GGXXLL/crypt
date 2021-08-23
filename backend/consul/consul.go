@@ -3,12 +3,13 @@ package consul
 import (
 	"context"
 	"fmt"
-	"github.com/DoNewsCode/crypt/backend"
-	"github.com/DoNewsCode/crypt/internal"
-	"github.com/hashicorp/consul/api"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/DoNewsCode/crypt/backend"
+	"github.com/DoNewsCode/crypt/internal"
+	"github.com/hashicorp/consul/api"
 )
 
 type Client struct {

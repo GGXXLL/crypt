@@ -3,10 +3,11 @@ package mock
 import (
 	"context"
 	"errors"
-	"github.com/DoNewsCode/crypt/backend"
-	"github.com/DoNewsCode/crypt/internal"
 	"sync"
 	"time"
+
+	"github.com/DoNewsCode/crypt/backend"
+	"github.com/DoNewsCode/crypt/internal"
 )
 
 var (

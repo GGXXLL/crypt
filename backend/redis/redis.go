@@ -3,11 +3,12 @@ package redis
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/DoNewsCode/crypt/backend"
 	"github.com/DoNewsCode/crypt/internal"
 	"github.com/go-redis/redis/v8"
-	"sync"
-	"time"
 )
 
 type Client struct {

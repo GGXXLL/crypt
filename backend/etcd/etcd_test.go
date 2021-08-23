@@ -2,11 +2,12 @@ package etcd
 
 import (
 	"context"
-	"github.com/DoNewsCode/crypt/backend"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/DoNewsCode/crypt/backend"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClient(t *testing.T) {

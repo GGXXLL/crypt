@@ -3,8 +3,9 @@ package internal
 import (
 	"bytes"
 	"crypto/md5"
-	"github.com/DoNewsCode/crypt/backend"
 	"sync"
+
+	"github.com/DoNewsCode/crypt/backend"
 )
 
 func GenMD5(b []byte) []byte {

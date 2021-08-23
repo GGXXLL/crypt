@@ -3,12 +3,12 @@ package firestore
 import (
 	"context"
 	"errors"
-	"github.com/DoNewsCode/crypt/internal"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/DoNewsCode/crypt/backend"
+	"github.com/DoNewsCode/crypt/internal"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )

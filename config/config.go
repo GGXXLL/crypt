@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"time"
+
 	"github.com/DoNewsCode/crypt/backend"
 	"github.com/DoNewsCode/crypt/backend/consul"
 	"github.com/DoNewsCode/crypt/backend/etcd"
 	"github.com/DoNewsCode/crypt/backend/firestore"
 	"github.com/DoNewsCode/crypt/backend/redis"
 	"github.com/DoNewsCode/crypt/encoding/secconf"
-	"time"
 )
 
 type KVPair struct {

@@ -2,12 +2,13 @@ package consul
 
 import (
 	"context"
-	"github.com/DoNewsCode/crypt/backend"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/DoNewsCode/crypt/backend"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClient(t *testing.T) {

@@ -2,10 +2,10 @@ package config
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/DoNewsCode/crypt/backend/mock"
+	"github.com/stretchr/testify/assert"
 )
 
 var pubring = `-----BEGIN PGP PUBLIC KEY BLOCK-----
