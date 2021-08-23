@@ -23,7 +23,6 @@ func getCmd(flagset *flag.FlagSet) {
 	}
 	flagset.StringVar(&secretKeyring, "secret-keyring", ".secring.gpg", "path to armored secret keyring")
 	flagset.Parse(os.Args[2:])
-	key := flagset.Arg(0)
 	if key == "" {
 		flagset.Usage()
 		os.Exit(1)
@@ -83,12 +82,10 @@ func setCmd(flagset *flag.FlagSet) {
 	}
 	flagset.StringVar(&keyring, "keyring", ".pubring.gpg", "path to armored public keyring")
 	flagset.Parse(os.Args[2:])
-	key := flagset.Arg(0)
 	if key == "" {
 		flagset.Usage()
 		os.Exit(1)
 	}
-	data := flagset.Arg(1)
 	if data == "" {
 		flagset.Usage()
 		os.Exit(1)

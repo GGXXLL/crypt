@@ -21,9 +21,11 @@ var (
 )
 
 func init() {
+	flagset.StringVar(&key, "key", "", "config key")
+	flagset.StringVar(&data, "data", "", "config data")
 	flagset.StringVar(&backendName, "backend", "etcd", "backend provider")
 	flagset.StringVar(&endpoint, "endpoint", "", "backend url")
-	flagset.BoolVar(&plaintext, "plaintext", false, "skip encryption")
+	flagset.BoolVar(&plaintext, "plaintext", true, "skip encryption")
 }
 
 func main() {

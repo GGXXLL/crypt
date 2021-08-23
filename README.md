@@ -7,6 +7,12 @@ You can use crypt as a command line tool or as a configuration library:
 * [crypt cli](bin/crypt)
 * [crypt/config](config)
 
+## CMD example
+- set key and value <br>
+```crypt set -key test -data test.json -backend=etcd -endpoint=127.0.0.1:2379```
+- get value by key <br>
+```crypt get -key test -backend=etcd -endpoint=127.0.0.1:2379```
+
 ## Demo
 
 Watch Kelsey explain `crypt` in this quick 5 minute video:
