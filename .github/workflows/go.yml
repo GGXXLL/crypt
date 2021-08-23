@@ -19,10 +19,20 @@ jobs:
           ETCD_ADVERTISE_CLIENT_URLS: http://localhost:2379
         ports:
           - 2379:2379
+        options: >-
+          --health-cmd "etcdctl cluster-health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       consul:
         image: hashicorp/consul:1.10.0
         ports:
           - 8500:8500
+        options: >-
+          --health-cmd "curl http://127.0.0.1:8500/health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       redis:
         image: redis
         options: >-
