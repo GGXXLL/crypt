@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ggxxll/crypt/backend"
+	"github.com/GGXXLL/crypt/backend"
 	goetcd "go.etcd.io/etcd/client/v3"
 )
 

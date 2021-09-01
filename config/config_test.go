@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ggxxll/crypt/backend/mock"
+	"github.com/GGXXLL/crypt/backend/mock"
 	"github.com/stretchr/testify/assert"
 )
 

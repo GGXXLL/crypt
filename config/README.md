@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ggxxll/crypt/config"
+	"github.com/GGXXLL/crypt/config"
 )
 
 var (
@@ -52,7 +52,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/ggxxll/crypt/config"
+	"github.com/GGXXLL/crypt/config"
 )
 
 var (

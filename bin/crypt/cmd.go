@@ -9,11 +9,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/ggxxll/crypt/backend"
-	"github.com/ggxxll/crypt/backend/consul"
-	"github.com/ggxxll/crypt/backend/etcd"
-	"github.com/ggxxll/crypt/backend/redis"
-	"github.com/ggxxll/crypt/encoding/secconf"
+	"github.com/GGXXLL/crypt/backend"
+	"github.com/GGXXLL/crypt/backend/consul"
+	"github.com/GGXXLL/crypt/backend/etcd"
+	"github.com/GGXXLL/crypt/backend/redis"
+	"github.com/GGXXLL/crypt/encoding/secconf"
 )
 
 func getCmd(flagset *flag.FlagSet) {

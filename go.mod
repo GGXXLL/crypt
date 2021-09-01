@@ -1,4 +1,4 @@
-module github.com/ggxxll/crypt
+module github.com/GGXXLL/crypt
 
 go 1.16
 

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ggxxll/crypt/backend"
-	"github.com/ggxxll/crypt/internal"
+	"github.com/GGXXLL/crypt/backend"
+	"github.com/GGXXLL/crypt/internal"
 	"github.com/hashicorp/consul/api"
 )
 

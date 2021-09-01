@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"github.com/ggxxll/crypt/backend"
-	"github.com/ggxxll/crypt/internal"
+	"github.com/GGXXLL/crypt/backend"
+	"github.com/GGXXLL/crypt/internal"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )
