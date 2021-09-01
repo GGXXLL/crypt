@@ -1,4 +1,4 @@
-module github.com/DoNewsCode/crypt
+module github.com/ggxxll/crypt
 
 go 1.16
 

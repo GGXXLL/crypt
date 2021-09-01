@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/DoNewsCode/crypt/config"
+	"github.com/ggxxll/crypt/config"
 )
 
 var (
@@ -52,7 +52,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/DoNewsCode/crypt/config"
+	"github.com/ggxxll/crypt/config"
 )
 
 var (

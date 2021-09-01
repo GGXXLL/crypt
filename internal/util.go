@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 	"sync"
 
-	"github.com/DoNewsCode/crypt/backend"
+	"github.com/ggxxll/crypt/backend"
 )
 
 func GenMD5(b []byte) []byte {

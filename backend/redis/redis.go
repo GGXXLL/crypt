@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DoNewsCode/crypt/backend"
-	"github.com/DoNewsCode/crypt/internal"
+	"github.com/ggxxll/crypt/backend"
+	"github.com/ggxxll/crypt/internal"
 	"github.com/go-redis/redis/v8"
 )
 
